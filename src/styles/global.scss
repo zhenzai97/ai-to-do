@@ -1,0 +1,99 @@
+@use 'variables' as *;
+
+:root,
+[data-theme='light'] {
+  --app-primary: #{$color-primary};
+  --app-primary-hover: #{$color-primary-hover};
+  --app-primary-soft: #{$color-primary-soft};
+  --app-bg: #{$color-bg};
+  --app-surface: #{$color-surface};
+  --app-surface-muted: #{$color-primary-soft};
+  --app-text: #{$color-text};
+  --app-text-muted: #{$color-text-muted};
+  --app-border: #{$color-border};
+  --app-gradient-header: linear-gradient(135deg, #{$color-primary-soft} 0%, #{$color-surface} 100%);
+  --app-gradient-bg:
+    radial-gradient(ellipse at 20% 0%, rgba(37, 99, 235, 0.12) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
+
+  --el-color-primary: #{$color-primary};
+  --el-color-primary-light-3: #60a5fa;
+  --el-color-primary-light-5: #93c5fd;
+  --el-color-primary-light-7: #bfdbfe;
+  --el-color-primary-light-8: #{$color-primary-light};
+  --el-color-primary-light-9: #{$color-primary-soft};
+  --el-color-primary-dark-2: #{$color-primary-hover};
+  --el-bg-color: #{$color-surface};
+  --el-bg-color-page: #{$color-bg};
+  --el-text-color-primary: #{$color-text};
+  --el-text-color-regular: #{$color-text-muted};
+  --el-border-color: #{$color-border};
+  --el-border-color-light: #{$color-border};
+  --el-fill-color-blank: #{$color-surface};
+}
+
+[data-theme='dark'] {
+  --app-primary: #60a5fa;
+  --app-primary-hover: #93c5fd;
+  --app-primary-soft: #1e3a5f;
+  --app-bg: #0f172a;
+  --app-surface: #1e293b;
+  --app-surface-muted: #334155;
+  --app-text: #f1f5f9;
+  --app-text-muted: #94a3b8;
+  --app-border: #334155;
+  --app-gradient-header: linear-gradient(135deg, #1e3a5f 0%, #1e293b 100%);
+  --app-gradient-bg:
+    radial-gradient(ellipse at 20% 0%, rgba(37, 99, 235, 0.18) 0%, transparent 50%),
+    radial-gradient(ellipse at 80% 100%, rgba(59, 130, 246, 0.1) 0%, transparent 50%);
+
+  --el-color-primary: #60a5fa;
+  --el-color-primary-light-3: #93c5fd;
+  --el-color-primary-light-5: #64748b;
+  --el-color-primary-light-7: #475569;
+  --el-color-primary-light-8: #334155;
+  --el-color-primary-light-9: #1e293b;
+  --el-color-primary-dark-2: #93c5fd;
+  --el-bg-color: #1e293b;
+  --el-bg-color-page: #0f172a;
+  --el-text-color-primary: #f1f5f9;
+  --el-text-color-regular: #94a3b8;
+  --el-border-color: #334155;
+  --el-border-color-light: #475569;
+  --el-fill-color-blank: #1e293b;
+}
+
+:root {
+  --el-border-radius-base: #{$radius-sm};
+  --el-border-radius-small: 6px;
+  --el-border-radius-round: #{$radius-md};
+}
+
+html {
+  height: 100%;
+  overflow: hidden;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  height: 100%;
+  overflow: hidden;
+  background: var(--app-bg);
+  background-image: var(--app-gradient-bg);
+  color: var(--app-text);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  height: 100%;
+  overflow: hidden;
+}
