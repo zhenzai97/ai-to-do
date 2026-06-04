@@ -9,12 +9,7 @@ export const useTaskStore = defineStore('tasks', {
 
   getters: {
     sortedTasks(state) {
-      return [...state.tasks].sort((a, b) => {
-        const weightDiff =
-          (PRIORITIES[b.priority]?.weight ?? 2) - (PRIORITIES[a.priority]?.weight ?? 2)
-        if (weightDiff !== 0) return weightDiff
-        return b.createdAt - a.createdAt
-      })
+      return [...state.tasks].sort((a, b) => a.order - b.order)
     },
 
     activeCount(state) {
@@ -31,12 +26,18 @@ export const useTaskStore = defineStore('tasks', {
       const trimmed = text.trim()
       if (!trimmed) return false
 
+      const nextOrder =
+        this.tasks.length === 0
+          ? 0
+          : Math.max(...this.tasks.map((task) => task.order ?? 0)) + 1
+
       this.tasks.push({
         id: generateId(),
         text: trimmed,
         completed: false,
         priority: PRIORITIES[priority] ? priority : DEFAULT_PRIORITY,
         createdAt: Date.now(),
+        order: nextOrder,
       })
       return true
     },
@@ -61,7 +62,39 @@ export const useTaskStore = defineStore('tasks', {
     },
 
     deleteTask(id) {
+      const removed = this.tasks.find((t) => t.id === id)
       this.tasks = this.tasks.filter((t) => t.id !== id)
+
+      if (removed) {
+        this.tasks
+          .sort((a, b) => a.order - b.order)
+          .forEach((task, index) => {
+            task.order = index
+          })
+      }
+    },
+
+    reorderByVisibleIds(newVisibleIds) {
+      if (!newVisibleIds.length) return
+
+      const visibleSet = new Set(newVisibleIds)
+      const currentIds = this.sortedTasks.map((task) => task.id)
+      const mergedIds = []
+      let visibleIndex = 0
+
+      for (const id of currentIds) {
+        if (visibleSet.has(id)) {
+          mergedIds.push(newVisibleIds[visibleIndex])
+          visibleIndex += 1
+        } else {
+          mergedIds.push(id)
+        }
+      }
+
+      mergedIds.forEach((id, index) => {
+        const task = this.tasks.find((item) => item.id === id)
+        if (task) task.order = index
+      })
     },
 
     clearAllTasks() {
@@ -69,7 +102,11 @@ export const useTaskStore = defineStore('tasks', {
     },
 
     clearCompleted() {
-      this.tasks = this.tasks.filter((t) => !t.completed)
+      const remaining = this.tasks.filter((t) => !t.completed)
+      remaining.forEach((task, index) => {
+        task.order = index
+      })
+      this.tasks = remaining
     },
   },
 })

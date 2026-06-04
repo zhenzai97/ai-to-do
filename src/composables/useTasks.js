@@ -17,5 +17,6 @@ export function useTasks() {
     deleteTask: store.deleteTask,
     clearAllTasks: store.clearAllTasks,
     clearCompleted: store.clearCompleted,
+    reorderByVisibleIds: store.reorderByVisibleIds,
   }
 }

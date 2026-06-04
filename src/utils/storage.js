@@ -1,4 +1,4 @@
-import { normalizePriority } from '@/constants/priority'
+import { PRIORITIES, normalizePriority } from '@/constants/priority'
 
 const STORAGE_KEY = 'ai-todo-tasks'
 
@@ -11,7 +11,29 @@ export function normalizeTask(task) {
     completed: Boolean(task.completed),
     createdAt: typeof task.createdAt === 'number' ? task.createdAt : Date.now(),
     priority: normalizePriority(task.priority),
+    order: typeof task.order === 'number' ? task.order : undefined,
   }
+}
+
+function assignOrders(tasks) {
+  if (tasks.length === 0) return tasks
+
+  const needsAssign = tasks.some((task) => typeof task.order !== 'number')
+  if (!needsAssign) {
+    return [...tasks].sort((a, b) => a.order - b.order)
+  }
+
+  const legacySorted = [...tasks].sort((a, b) => {
+    const weightDiff =
+      (PRIORITIES[b.priority]?.weight ?? 2) - (PRIORITIES[a.priority]?.weight ?? 2)
+    if (weightDiff !== 0) return weightDiff
+    return b.createdAt - a.createdAt
+  })
+
+  return legacySorted.map((task, index) => ({
+    ...task,
+    order: index,
+  }))
 }
 
 export function loadTasks() {
@@ -20,7 +42,7 @@ export function loadTasks() {
     if (!raw) return []
     const data = JSON.parse(raw)
     if (!Array.isArray(data)) return []
-    return data.map(normalizeTask).filter(Boolean)
+    return assignOrders(data.map(normalizeTask).filter(Boolean))
   } catch {
     return []
   }

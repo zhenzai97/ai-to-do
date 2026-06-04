@@ -1,9 +1,8 @@
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
 import { gsap } from 'gsap'
-import { Delete, Edit } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { getPriorityConfig, PRIORITY_OPTIONS } from '@/constants/priority'
+import { Delete, Edit, Rank } from '@element-plus/icons-vue'
+import { getPriorityConfig } from '@/constants/priority'
 import { prefersReducedMotion } from '@/composables/useGsapContext'
 
 const props = defineProps({
@@ -13,13 +12,10 @@ const props = defineProps({
   },
 })
 
-const emit = defineEmits(['toggle', 'delete', 'update'])
+const emit = defineEmits(['toggle', 'delete', 'edit'])
 
 const rootEl = ref(null)
 const textEl = ref(null)
-const editVisible = ref(false)
-const editText = ref('')
-const editPriority = ref('medium')
 let ctx = null
 
 const priorityConfig = computed(() => getPriorityConfig(props.task.priority))
@@ -67,24 +63,7 @@ function handleDelete() {
 }
 
 function openEditDialog() {
-  editText.value = props.task.text
-  editPriority.value = props.task.priority
-  editVisible.value = true
-}
-
-function saveEdit() {
-  const trimmed = editText.value.trim()
-  if (!trimmed) {
-    ElMessage.warning('任务内容不能为空')
-    return
-  }
-
-  emit('update', {
-    id: props.task.id,
-    text: trimmed,
-    priority: editPriority.value,
-  })
-  editVisible.value = false
+  emit('edit', props.task)
 }
 
 watch(
@@ -109,11 +88,21 @@ onUnmounted(() => {
   <li
     ref="rootEl"
     class="task-item"
+    :data-id="task.id"
     :class="[
       priorityClass,
       { 'task-item--completed': task.completed },
     ]"
   >
+    <button
+      type="button"
+      class="task-item__drag-handle"
+      aria-label="拖拽排序"
+      tabindex="-1"
+    >
+      <el-icon :size="16"><Rank /></el-icon>
+    </button>
+
     <el-checkbox
       class="task-item__checkbox"
       :model-value="task.completed"
@@ -155,41 +144,6 @@ onUnmounted(() => {
         <el-icon><Delete /></el-icon>
       </el-button>
     </div>
-
-    <el-dialog
-      v-model="editVisible"
-      title="编辑任务"
-      width="420px"
-      append-to-body
-      destroy-on-close
-      class="task-item__dialog"
-    >
-      <el-form label-position="top">
-        <el-form-item label="任务内容">
-          <el-input
-            v-model="editText"
-            maxlength="200"
-            show-word-limit
-            placeholder="请输入任务内容"
-            @keyup.enter="saveEdit"
-          />
-        </el-form-item>
-        <el-form-item label="优先级">
-          <el-select v-model="editPriority" placeholder="选择优先级" style="width: 100%">
-            <el-option
-              v-for="option in PRIORITY_OPTIONS"
-              :key="option.value"
-              :label="option.label"
-              :value="option.value"
-            />
-          </el-select>
-        </el-form-item>
-      </el-form>
-      <template #footer>
-        <el-button @click="editVisible = false">取消</el-button>
-        <el-button type="primary" @click="saveEdit">保存</el-button>
-      </template>
-    </el-dialog>
   </li>
 </template>
 
@@ -207,6 +161,47 @@ onUnmounted(() => {
   box-shadow: $shadow-sm;
   overflow: hidden;
   transition: border-color $transition, box-shadow $transition;
+
+  &--ghost {
+    opacity: 0.45;
+    background: var(--app-primary-soft);
+    box-shadow: none;
+  }
+
+  &--chosen {
+    box-shadow: $shadow-md;
+  }
+
+  &--dragging {
+    opacity: 0.92;
+    box-shadow: $shadow-md;
+  }
+
+  &__drag-handle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 20px;
+    height: 28px;
+    padding: 0;
+    color: var(--app-text-muted);
+    background: transparent;
+    border: none;
+    border-radius: $radius-sm;
+    cursor: grab;
+    touch-action: none;
+    transition: color $transition, background $transition;
+
+    &:hover {
+      color: var(--app-primary);
+      background: rgba($color-primary, 0.06);
+    }
+
+    &:active {
+      cursor: grabbing;
+    }
+  }
 
   &--priority-high {
     border-left-color: $color-priority-high;
@@ -275,9 +270,14 @@ onUnmounted(() => {
     padding: 0.85rem;
 
     &__text {
-      order: 3;
+      order: 4;
       width: 100%;
       padding-left: 1.75rem;
+    }
+
+    &__drag-handle {
+      width: 24px;
+      height: 32px;
     }
 
     &__actions {

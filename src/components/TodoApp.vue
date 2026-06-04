@@ -1,7 +1,8 @@
 <script setup>
-import { ref, watch, nextTick, onMounted } from 'vue'
+import { ref, watch, nextTick, onMounted, computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { gsap } from 'gsap'
+import draggable from 'vuedraggable'
 import { List, Plus } from '@element-plus/icons-vue'
 import { ElMessageBox, ElMessage } from 'element-plus'
 import { useTaskStore } from '@/stores/tasks'
@@ -21,6 +22,10 @@ const containerRef = ref(null)
 const statsActiveRef = ref(null)
 const statsCompletedRef = ref(null)
 const emptyRef = ref(null)
+const editVisible = ref(false)
+const editText = ref('')
+const editPriority = ref(DEFAULT_PRIORITY)
+const editingTaskId = ref(null)
 
 const { create: createGsapContext } = useGsapContext()
 
@@ -35,7 +40,17 @@ const {
   deleteTask,
   clearAllTasks,
   clearCompleted,
+  reorderByVisibleIds,
 } = useTasks()
+
+const draggableTasks = computed({
+  get() {
+    return filteredTasks.value
+  },
+  set(newList) {
+    reorderByVisibleIds(newList.map((task) => task.id))
+  },
+})
 
 function shakeInput() {
   const el = composerRef.value
@@ -70,12 +85,37 @@ function handleSubmit() {
 }
 
 function handleUpdate(payload) {
-  const success = updateTask(payload.id, {
-    text: payload.text,
+  const trimmed = payload.text.trim()
+  if (!trimmed) {
+    ElMessage.warning('任务内容不能为空')
+    return false
+  }
+
+  return updateTask(payload.id, {
+    text: trimmed,
     priority: payload.priority,
   })
-  if (!success) {
-    ElMessage.warning('任务内容不能为空')
+}
+
+function openEditDialog(task) {
+  editingTaskId.value = task.id
+  editText.value = task.text
+  editPriority.value = task.priority
+  editVisible.value = true
+}
+
+function saveEdit() {
+  if (!editingTaskId.value) return
+
+  const success = handleUpdate({
+    id: editingTaskId.value,
+    text: editText.value,
+    priority: editPriority.value,
+  })
+
+  if (success) {
+    editVisible.value = false
+    editingTaskId.value = null
   }
 }
 
@@ -284,7 +324,10 @@ onMounted(() => {
 
         <section class="todo-app__list-section" aria-label="任务列表">
           <div v-if="sortedTasks.length" class="todo-app__list-header">
-            <span class="todo-app__list-title">任务列表</span>
+            <div class="todo-app__list-heading">
+              <span class="todo-app__list-title">任务列表</span>
+              <span v-if="filteredTasks.length > 1" class="todo-app__list-hint">拖拽左侧手柄排序</span>
+            </div>
             <div class="todo-app__list-actions">
               <el-button
                 v-if="completedCount > 0"
@@ -308,16 +351,28 @@ onMounted(() => {
             </div>
           </div>
 
-          <ul v-if="filteredTasks.length" class="todo-app__list">
-            <TaskItem
-              v-for="task in filteredTasks"
-              :key="task.id"
-              :task="task"
-              @toggle="toggleTask"
-              @delete="deleteTask"
-              @update="handleUpdate"
-            />
-          </ul>
+          <draggable
+            v-if="filteredTasks.length"
+            v-model="draggableTasks"
+            class="todo-app__list"
+            tag="ul"
+            item-key="id"
+            handle=".task-item__drag-handle"
+            :animation="180"
+            ghost-class="task-item--ghost"
+            chosen-class="task-item--chosen"
+            drag-class="task-item--dragging"
+            :disabled="filteredTasks.length < 2"
+          >
+            <template #item="{ element }">
+              <TaskItem
+                :task="element"
+                @toggle="toggleTask"
+                @delete="deleteTask"
+                @edit="openEditDialog"
+              />
+            </template>
+          </draggable>
 
           <el-empty
             v-else-if="sortedTasks.length === 0"
@@ -338,6 +393,41 @@ onMounted(() => {
         <p class="todo-app__footer">数据保存在本地浏览器，刷新不会丢失</p>
       </template>
     </el-card>
+
+    <el-dialog
+      v-model="editVisible"
+      title="编辑任务"
+      width="420px"
+      append-to-body
+      destroy-on-close
+      class="todo-app__edit-dialog"
+    >
+      <el-form label-position="top">
+        <el-form-item label="任务内容">
+          <el-input
+            v-model="editText"
+            maxlength="200"
+            show-word-limit
+            placeholder="请输入任务内容"
+            @keyup.enter="saveEdit"
+          />
+        </el-form-item>
+        <el-form-item label="优先级">
+          <el-select v-model="editPriority" placeholder="选择优先级" style="width: 100%">
+            <el-option
+              v-for="option in PRIORITY_OPTIONS"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+          </el-select>
+        </el-form-item>
+      </el-form>
+      <template #footer>
+        <el-button @click="editVisible = false">取消</el-button>
+        <el-button type="primary" @click="saveEdit">保存</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -590,10 +680,21 @@ onMounted(() => {
     margin-bottom: 0.625rem;
   }
 
+  &__list-heading {
+    display: flex;
+    flex-direction: column;
+    gap: 0.125rem;
+  }
+
   &__list-title {
     font-size: 0.9rem;
     font-weight: 600;
     color: var(--app-text);
+  }
+
+  &__list-hint {
+    font-size: 0.75rem;
+    color: var(--app-text-muted);
   }
 
   &__list-actions {
